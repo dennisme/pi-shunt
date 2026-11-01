@@ -178,6 +178,25 @@ Example `~/.pi/agent/settings.json`:
 | `SHUNT_DENY_GLOBS` | _(none)_ | Comma-separated globs appended to the built-in secrets denylist |
 | `SHUNT_WRITE_OVERWRITE` | `false` | Let `shunt_write` replace an existing file without confirmation |
 
+### Preflight checks
+
+`/shunt:doctor` verifies that delegation can actually work before you depend on it:
+
+```
+pi-shunt diagnostics
+===================
+OK    worker binary    /opt/homebrew/bin/pi
+OK    worker model     google/gemini-2.5-flash
+OK    worker auth      Google
+OK    path policy      Confined to /Users/you/project
+
+All checks passed.
+```
+
+It checks that the `pi` binary is on the PATH the extension was launched with (workers are spawned as a subprocess), that each configured model resolves to exactly one entry in the model catalog, that the model's provider has credentials, and that the project root the path policy confines to is readable. A bare model id matching several providers is reported as a warning with the candidates, so you can qualify it as `provider/id`.
+
+The same checks run at session start, where only failures are reported. Without them, a misspelled `SHUNT_WORKER_MODEL` or a missing provider key surfaces as a tool error mid-task, after the main model has already been blocked from reading the file it wanted.
+
 ### Worker models
 
 `shunt_read` summarizes, which the cheapest capable model handles well. `shunt_write` generates code that lands on disk, which usually wants something stronger. Set `SHUNT_WRITE_MODEL` to split them; leave it unset and both tools share `SHUNT_WORKER_MODEL`.
@@ -263,6 +282,7 @@ Wrote 140 lines to tests/UserService.test.ts   [shunt_write: ... tokens]
 | Command | Effect |
 |---------|--------|
 | `/shunt:config` | Show current configuration (toggles, cycle key, env vars) |
+| `/shunt:doctor` | Check that delegation can work: worker binary, models, credentials |
 | `/shunt:toggle` | Enable/disable **all** shunt behavior (hooks + tools) |
 | `/shunt:toggle:read` | Enable/disable read interception + `shunt_read` only |
 | `/shunt:toggle:write` | Enable/disable `shunt_write` only |

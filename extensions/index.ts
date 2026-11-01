@@ -12,6 +12,7 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { loadConfig } from './lib/config.ts';
 import { buildPathPolicy } from './lib/paths.ts';
+import { runDiagnostics, formatDiagnostics, type ModelCatalog } from './lib/doctor.ts';
 import { getLineCount, isBashReadCommand } from './lib/utils.ts';
 import { formatStats, fileTokenEstimate, recordRawFile, stats, countedPaths } from './lib/stats.ts';
 import { registerShuntRead } from './tools/shunt-read.ts';
@@ -32,6 +33,14 @@ export default function piShuntExtension(pi: ExtensionAPI) {
   if (!config.enabled) {
     return;
   }
+
+  const diagnose = (ctx: { modelRegistry?: unknown }) =>
+    runDiagnostics({
+      config,
+      catalog: ctx.modelRegistry as ModelCatalog,
+      pathValue: process.env.PATH,
+      root: pathPolicy.roots[0]
+    });
 
   // Register the bulk read tool
   registerShuntRead(pi, config, pathPolicy);
@@ -113,6 +122,25 @@ export default function piShuntExtension(pi: ExtensionAPI) {
       `pi-shunt active (threshold: ${config.minLines} lines, worker: ${config.workerModel})`,
       'info'
     );
+
+    // Surface only problems here. A misspelled model or a missing provider key
+    // would otherwise fail mid-task, after the main model has been blocked.
+    const failures = diagnose(ctx).filter((check) => check.status === 'fail');
+    if (failures.length > 0) {
+      ctx.ui.notify(
+        `pi-shunt: ${failures.length} check${failures.length > 1 ? 's' : ''} failed ` +
+        `(${failures.map((check) => check.name).join(', ')}). Run /shunt:doctor for details.`,
+        'warning'
+      );
+    }
+  });
+
+  // Register command to run the preflight checks
+  pi.registerCommand('shunt:doctor', {
+    description: 'Check that delegation can work: worker binary, models, credentials',
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(formatDiagnostics(diagnose(ctx)), 'info');
+    }
   });
 
   // Register command to show session statistics

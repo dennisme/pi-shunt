@@ -150,7 +150,7 @@ export function registerShuntWrite(pi: ExtensionAPI, config: ShuntConfig, policy
             outputTokens: result.outputTokens,
             totalTokens: result.totalTokens,
             latencyMs: Math.round(latencyMs),
-            workerModel: result.workerModel ?? config.workerModel
+            workerModel: result.workerModel ?? config.writeModel
           }
         };
       } catch (error) {

@@ -20,6 +20,8 @@ export interface ShuntConfig {
   minLines: number;
   maxPayloadBytes: number;
   workerModel: string;
+  /** Model for shunt_write; falls back to workerModel (SHUNT_WRITE_MODEL). */
+  writeModel: string;
   workerTemperature: number;
   workerInstructions: string;
   /** Runtime toggle for read interception + shunt_read (/shunt:toggle:read). */
@@ -65,6 +67,7 @@ export interface ConfigSource {
   workerTemperature: string | undefined;
   workerInstructions: string | undefined;
   writeEnabled: string | undefined;
+  writeModel: string | undefined;
   writeInstructions: string | undefined;
   cycleKey: string | undefined;
   workerTimeoutMs: string | undefined;
@@ -95,6 +98,7 @@ function pickShuntEnv(env: Record<string, string>): ConfigSource {
     workerTemperature: env.SHUNT_WORKER_TEMPERATURE,
     workerInstructions: env.SHUNT_WORKER_INSTRUCTIONS,
     writeEnabled: env.SHUNT_WRITE_ENABLED,
+    writeModel: env.SHUNT_WRITE_MODEL,
     writeInstructions: env.SHUNT_WRITE_INSTRUCTIONS,
     cycleKey: env.SHUNT_CYCLE_KEY,
     workerTimeoutMs: env.SHUNT_WORKER_TIMEOUT_MS,
@@ -115,6 +119,7 @@ function mergeSource(higher: ConfigSource, lower: ConfigSource): ConfigSource {
     workerTemperature: higher.workerTemperature ?? lower.workerTemperature,
     workerInstructions: higher.workerInstructions ?? lower.workerInstructions,
     writeEnabled: higher.writeEnabled ?? lower.writeEnabled,
+    writeModel: higher.writeModel ?? lower.writeModel,
     writeInstructions: higher.writeInstructions ?? lower.writeInstructions,
     cycleKey: higher.cycleKey ?? lower.cycleKey,
     workerTimeoutMs: higher.workerTimeoutMs ?? lower.workerTimeoutMs,
@@ -135,6 +140,7 @@ export function loadConfig(cwd = process.cwd()): ShuntConfig {
     workerTemperature: process.env.SHUNT_WORKER_TEMPERATURE,
     workerInstructions: process.env.SHUNT_WORKER_INSTRUCTIONS,
     writeEnabled: process.env.SHUNT_WRITE_ENABLED,
+    writeModel: process.env.SHUNT_WRITE_MODEL,
     writeInstructions: process.env.SHUNT_WRITE_INSTRUCTIONS,
     cycleKey: process.env.SHUNT_CYCLE_KEY,
     workerTimeoutMs: process.env.SHUNT_WORKER_TIMEOUT_MS,
@@ -156,6 +162,8 @@ export function loadConfig(cwd = process.cwd()): ShuntConfig {
 
   const yes = (v: string | undefined) => v === 'true' || v === '1' || v === 'yes';
 
+  const workerModel = merged.workerModel ?? 'gemini-2.5-flash';
+
   const minLines = parseInt(merged.minLines ?? '350', 10);
   const maxPayloadBytes = parseInt(merged.maxPayloadBytes ?? '400000', 10);
   const temperature = parseFloat(merged.workerTemperature ?? '0.2');
@@ -165,7 +173,8 @@ export function loadConfig(cwd = process.cwd()): ShuntConfig {
     enabled: merged.enabled === undefined ? true : yes(merged.enabled),
     minLines: Number.isNaN(minLines) ? 350 : minLines,
     maxPayloadBytes: Number.isNaN(maxPayloadBytes) ? 400000 : maxPayloadBytes,
-    workerModel: merged.workerModel ?? 'gemini-2.5-flash',
+    workerModel,
+    writeModel: merged.writeModel ?? workerModel,
     workerTemperature: Number.isNaN(temperature) ? 0.2 : temperature,
     workerInstructions: merged.workerInstructions ?? DEFAULT_WORKER_INSTRUCTIONS,
     writeEnabled: merged.writeEnabled === undefined ? true : yes(merged.writeEnabled),

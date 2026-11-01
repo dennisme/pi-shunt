@@ -112,7 +112,13 @@ export async function delegateWriteToWorker(
   await fs.promises.writeFile(messagePath, message, 'utf-8');
 
   try {
-    const result = await spawnPi(config, messagePath, signal, config.writeInstructions);
+    const result = await spawnPi(
+      config,
+      messagePath,
+      signal,
+      config.writeInstructions,
+      config.writeModel
+    );
     return toWorkerResult(result, message);
   } finally {
     await fs.promises.rm(tmpDir, { recursive: true, force: true });
@@ -161,13 +167,14 @@ export interface SpawnResult {
 export function buildWorkerArgs(
   config: ShuntConfig,
   messagePath: string,
-  systemPrompt: string | undefined
+  systemPrompt: string | undefined,
+  model?: string
 ): string[] {
   return [
     '--mode', 'json',
     '-p',
     '--no-session',
-    '--model', config.workerModel,
+    '--model', model ?? config.workerModel,
     '--system-prompt', systemPrompt ?? config.workerInstructions,
     '--no-tools',
     '--no-extensions',
@@ -351,9 +358,10 @@ async function spawnPi(
   config: ShuntConfig,
   messagePath: string,
   signal?: AbortSignal,
-  systemPrompt?: string
+  systemPrompt?: string,
+  model?: string
 ): Promise<SpawnResult> {
-  return runWorkerProcess('pi', buildWorkerArgs(config, messagePath, systemPrompt), {
+  return runWorkerProcess('pi', buildWorkerArgs(config, messagePath, systemPrompt, model), {
     timeoutMs: config.workerTimeoutMs,
     signal,
     env: buildWorkerEnv(process.env as Record<string, string | undefined>),

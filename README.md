@@ -165,7 +165,8 @@ Example `~/.pi/agent/settings.json`:
 | `SHUNT_ENABLED` | `true` | Enable/disable extension |
 | `SHUNT_MIN_LINES` | `350` | Line count above which reads are blocked |
 | `SHUNT_MAX_PAYLOAD_BYTES` | `400000` | Maximum request size |
-| `SHUNT_WORKER_MODEL` | `gemini-2.5-flash` | Model to use for analysis |
+| `SHUNT_WORKER_MODEL` | `gemini-2.5-flash` | Model used for `shunt_read` analysis |
+| `SHUNT_WRITE_MODEL` | _(worker model)_ | Model used for `shunt_write` code generation |
 | `SHUNT_WORKER_TEMPERATURE` | `0.2` | Temperature for worker model |
 | `SHUNT_WORKER_INSTRUCTIONS` | _(default)_ | Custom system prompt for worker |
 | `SHUNT_READ_ENABLED` | `true` | Enable/disable read interception + `shunt_read` |
@@ -176,6 +177,21 @@ Example `~/.pi/agent/settings.json`:
 | `SHUNT_ALLOW_PATHS` | _(none)_ | Colon-separated extra roots the shunt tools may read or write |
 | `SHUNT_DENY_GLOBS` | _(none)_ | Comma-separated globs appended to the built-in secrets denylist |
 | `SHUNT_WRITE_OVERWRITE` | `false` | Let `shunt_write` replace an existing file without confirmation |
+
+### Worker models
+
+`shunt_read` summarizes, which the cheapest capable model handles well. `shunt_write` generates code that lands on disk, which usually wants something stronger. Set `SHUNT_WRITE_MODEL` to split them; leave it unset and both tools share `SHUNT_WORKER_MODEL`.
+
+```json
+{
+  "env": {
+    "SHUNT_WORKER_MODEL": "gemini-2.5-flash",
+    "SHUNT_WRITE_MODEL": "anthropic/claude-sonnet-5"
+  }
+}
+```
+
+`/shunt:config` shows both, and marks the write model as "(same as worker)" when it is not split.
 
 ### Path policy
 

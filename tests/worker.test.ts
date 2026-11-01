@@ -135,3 +135,43 @@ test('timeout is configurable and defaults to two minutes', () => {
 
   assert.equal(fromEnv, 5000);
 });
+
+// ============================================================================
+// Separate worker model for code generation
+// ============================================================================
+
+test('the write model defaults to the read worker model', () => {
+  assert.equal(config.writeModel, config.workerModel);
+});
+
+test('SHUNT_WRITE_MODEL overrides the model for writes only', () => {
+  process.env.SHUNT_WRITE_MODEL = 'anthropic/claude-sonnet-5';
+  try {
+    const withWriteModel = loadConfig();
+    assert.equal(withWriteModel.writeModel, 'anthropic/claude-sonnet-5');
+    assert.equal(withWriteModel.workerModel, config.workerModel, 'reads keep the cheap model');
+  } finally {
+    delete process.env.SHUNT_WRITE_MODEL;
+  }
+});
+
+test('SHUNT_WORKER_MODEL alone still drives both tools', () => {
+  process.env.SHUNT_WORKER_MODEL = 'google/gemini-2.0-flash';
+  try {
+    const shared = loadConfig();
+    assert.equal(shared.workerModel, 'google/gemini-2.0-flash');
+    assert.equal(shared.writeModel, 'google/gemini-2.0-flash');
+  } finally {
+    delete process.env.SHUNT_WORKER_MODEL;
+  }
+});
+
+test('worker args carry an explicit model override', () => {
+  const args = buildWorkerArgs(config, '/tmp/message.txt', 'WRITE PROMPT', 'test/write-model');
+  assert.equal(args[args.indexOf('--model') + 1], 'test/write-model');
+});
+
+test('worker args fall back to the read worker model with no override', () => {
+  const args = buildWorkerArgs(config, '/tmp/message.txt', undefined);
+  assert.equal(args[args.indexOf('--model') + 1], config.workerModel);
+});

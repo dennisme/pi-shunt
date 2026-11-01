@@ -156,6 +156,7 @@ Enabled: ${config.enabled}
 Min Lines Threshold: ${config.minLines}
 Max Payload Bytes: ${config.maxPayloadBytes}
 Worker Model: ${config.workerModel}
+Write Model: ${config.writeModel}${config.writeModel === config.workerModel ? ' (same as worker)' : ''}
 Worker Timeout: ${config.workerTimeoutMs}ms
 Cycle Key: ${config.cycleKey}
 
